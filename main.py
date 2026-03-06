@@ -94,11 +94,34 @@ def save_history() -> None:
             {"timestamp": p.timestamp.isoformat(), "btc": str(p.btc), "eth": str(p.eth)}
             for p in price_history
         ])
-        # TTL 25 jam — lebih dari max lookback 24h
-        _redis_request("POST", f"/set/{REDIS_KEY}", {"value": data, "ex": 90000})
+        # Upstash REST pipeline: POST / dengan array command
+        headers = {"Authorization": f"Bearer {UPSTASH_REDIS_TOKEN}"}
+        resp = requests.post(
+            f"{UPSTASH_REDIS_URL}/pipeline",
+            headers=headers,
+            json=[["SET", REDIS_KEY, data], ["EXPIRE", REDIS_KEY, 90000]],
+            timeout=10,
+        )
+        resp.raise_for_status()
         logger.debug(f"Saved {len(price_history)} points to Redis")
     except Exception as e:
         logger.warning(f"Failed to save to Redis: {e}")
+
+
+def _unwrap_redis_data(raw) -> list:
+    """Handle berbagai format response Upstash: string, list, atau wrapped dict."""
+    # Kalau string, parse dulu
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    # Kalau masih string (double encoded)
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    # Kalau wrapped {"value": "..."}
+    if isinstance(raw, dict) and "value" in raw:
+        raw = raw["value"]
+        if isinstance(raw, str):
+            raw = json.loads(raw)
+    return raw
 
 
 def load_history() -> None:
@@ -111,19 +134,7 @@ def load_history() -> None:
         if not result or result.get("result") is None:
             logger.info("No history in Redis, starting fresh")
             return
-
-        raw = result["result"]
-
-        # Upstash bisa return string atau sudah jadi list
-        if isinstance(raw, str):
-            data = json.loads(raw)
-        else:
-            data = raw
-
-        # Handle double-encoded JSON (string di dalam string)
-        if isinstance(data, str):
-            data = json.loads(data)
-
+        data = _unwrap_redis_data(result["result"])
         price_history = [
             PricePoint(
                 timestamp=datetime.fromisoformat(p["timestamp"]),
@@ -144,13 +155,7 @@ def get_redis_status() -> dict:
     if not result or result.get("result") is None:
         return {"ok": False, "points": 0, "hours": 0.0, "first": "-", "last": "-"}
     try:
-        raw = result["result"]
-        if isinstance(raw, str):
-            data = json.loads(raw)
-        else:
-            data = raw
-        if isinstance(data, str):
-            data = json.loads(data)
+        data = _unwrap_redis_data(result["result"])
         hours = len(data) * settings["scan_interval"] / 3600
         return {
             "ok": True,
@@ -160,7 +165,7 @@ def get_redis_status() -> dict:
             "last": data[-1]["timestamp"] if data else "-",
         }
     except Exception as e:
-        logger.warning(f"get_redis_status parse error: {e} | raw type: {type(raw)} | raw[:100]: {str(raw)[:100]}")
+        logger.warning(f"get_redis_status error: {e}")
         return {"ok": False, "points": 0, "hours": 0.0, "first": "-", "last": "-"}
 
 
