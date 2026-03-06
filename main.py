@@ -109,7 +109,15 @@ def load_history() -> None:
         if not result or result.get("result") is None:
             logger.info("No history in Redis, starting fresh")
             return
-        data = json.loads(result["result"])
+
+        raw = result["result"]
+
+        # Upstash kadang return sudah jadi list, kadang masih string
+        if isinstance(raw, str):
+            data = json.loads(raw)
+        else:
+            data = raw
+
         price_history = [
             PricePoint(
                 timestamp=datetime.fromisoformat(p["timestamp"]),
@@ -120,7 +128,7 @@ def load_history() -> None:
         ]
         logger.info(f"Loaded {len(price_history)} points from Redis")
     except Exception as e:
-        logger.warning(f"Failed to load from Redis: {e}")
+        logger.warning(f"Failed to load history from Redis: {e}")
         price_history = []
 
 
