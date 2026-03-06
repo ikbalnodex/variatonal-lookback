@@ -53,6 +53,8 @@ settings = {
 
 last_update_id: int = 0
 last_heartbeat_time: Optional[datetime] = None
+_save_counter: int = 0
+SAVE_EVERY_N_SCANS: int = 3  # 3 scan × 3 menit = simpan tiap ~9 menit
 scan_stats = {
     "count": 0,
     "last_btc_price": None,
@@ -142,7 +144,13 @@ def get_redis_status() -> dict:
     if not result or result.get("result") is None:
         return {"ok": False, "points": 0, "hours": 0.0, "first": "-", "last": "-"}
     try:
-        data = json.loads(result["result"])
+        raw = result["result"]
+        if isinstance(raw, str):
+            data = json.loads(raw)
+        else:
+            data = raw
+        if isinstance(data, str):
+            data = json.loads(data)
         hours = len(data) * settings["scan_interval"] / 3600
         return {
             "ok": True,
@@ -537,7 +545,7 @@ def send_startup_message() -> None:
 # Main Loop
 # =============================================================================
 def main_loop() -> None:
-    global last_heartbeat_time
+    global last_heartbeat_time, _save_counter
 
     logger.info("=" * 60)
     logger.info("Lookback Bot starting - History Collector Mode")
@@ -584,7 +592,11 @@ def main_loop() -> None:
                 else:
                     append_price(now, btc_price, eth_price)
                     prune_history(now)
-                    save_history()
+
+                    _save_counter += 1
+                    if _save_counter >= SAVE_EVERY_N_SCANS:
+                        save_history()
+                        _save_counter = 0
 
                     hours = len(price_history) * settings["scan_interval"] / 3600
                     logger.info(
