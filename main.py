@@ -314,10 +314,10 @@ def send_reply(message: str, chat_id: str) -> None:
 
 def handle_help(chat_id: str) -> None:
     send_reply(
-        "Senpai, senpai! Ini aku, Lookback Bot~ (≧▽≦)\n"
+        "Senpai, ini aku Lookback Bot.\n"
         "\n"
-        "Tugasku satu aja — kumpulkan data harga BTC/ETH\n"
-        "dan simpan ke Redis buat bot utama! Keren kan? (^▽^)\n"
+        "Tugasku satu — kumpulin harga BTC/ETH tiap beberapa menit\n"
+        "dan simpen ke Redis buat bot utama.\n"
         "\n"
         "*Command:*\n"
         "`/status` - lihat kondisi sekarang\n"
@@ -326,7 +326,7 @@ def handle_help(chat_id: str) -> None:
         "`/heartbeat <menit>` - ubah laporan rutin (0=off)\n"
         "`/help` - tampilkan pesan ini\n"
         "\n"
-        "_Aku kerja keras di sini buat senpai ya~ Jangan lupa perhatiin aku! (〃>_<;〃)_",
+        "_Aku kerja di sini ya senpai, tenang aja._",
         chat_id
     )
 
@@ -339,7 +339,6 @@ def handle_status(chat_id: str) -> None:
     redis_ok = "✅ Terhubung" if UPSTASH_REDIS_URL else "❌ Tidak dikonfigurasi"
     data_status = f"✅ Penuh ({hours:.1f}h)" if hours >= max_h else f"⏳ {hours:.1f}h / {max_h}h"
     send_reply(
-        "Senpai nanya status aku? Hehehe seneng deh~ (≧▽≦)\n"
         "📊 *Status Lookback Bot*\n"
         "\n"
         f"┌─────────────────────\n"
@@ -359,7 +358,7 @@ def handle_status(chat_id: str) -> None:
         f"*Redis:* {redis_ok}\n"
         f"*Data lokal:* {data_status}\n"
         "\n"
-        "_Aku terus jagain dari sini kok senpai! Percaya deh~ (^▽^)_",
+        "_Masih jalan kok senpai._",
         chat_id
     )
 
@@ -367,26 +366,24 @@ def handle_status(chat_id: str) -> None:
 def handle_redis(chat_id: str) -> None:
     if not UPSTASH_REDIS_URL:
         send_reply(
-            "Senpai, senpai! Redis-nya belum diisi nih~ (>_<)\n"
-            "Pastikan `UPSTASH_REDIS_REST_URL` dan token sudah diisi ya! Jangan lupa~",
+            "⚠️ Redis belum dikonfigurasi senpai.\n"
+            "Isi `UPSTASH_REDIS_REST_URL` dan token di Railway dulu ya.",
             chat_id
         )
         return
     s = get_redis_status()
     if not s["ok"]:
         send_reply(
-            "❌ *Belum ada data di Redis senpai~*\n\n"
-            "Sabar ya, aku lagi ngumpulin data nih! (〃>_<;〃)\n"
-            "Tunggu beberapa menit lagi~",
+            "❌ *Belum ada data di Redis.*\n\n"
+            "Lagi ngumpulin data senpai, tunggu beberapa menit lagi.",
             chat_id
         )
         return
     max_h = settings["max_lookback_hours"]
     bar_filled = int((s["hours"] / max_h) * 10)
     bar = "█" * bar_filled + "░" * (10 - bar_filled)
-    ready = "✅ Siap dipakai bot utama~" if s["hours"] >= max_h else f"⏳ {s['hours']:.1f}h / {max_h}h"
+    ready = "✅ Siap dipakai bot utama" if s["hours"] >= max_h else f"⏳ {s['hours']:.1f}h / {max_h}h"
     send_reply(
-        f"Senpai, senpai! Dengar ini dong~ (≧▽≦)\n"
         f"⚡ *Redis Status*\n"
         f"\n"
         f"┌─────────────────────\n"
@@ -399,43 +396,42 @@ def handle_redis(chat_id: str) -> None:
         f"Data pertama: `{s['first'][:19]}`\n"
         f"Data terakhir: `{s['last'][:19]}`\n"
         f"\n"
-        f"_Key Redis: `{REDIS_KEY}`_\n"
-        f"_Aku simpen semua baik-baik kok senpai! Keren kan? (^▽^)_",
+        f"_Key: `{REDIS_KEY}`_",
         chat_id
     )
 
 
 def handle_interval(args: list, chat_id: str) -> None:
     if not args:
-        send_reply(f"Scan interval sekarang *{settings['scan_interval']}s* senpai~\nContoh: `/interval 180`", chat_id)
+        send_reply(f"Scan interval sekarang *{settings['scan_interval']}s* senpai.\nContoh: `/interval 180`", chat_id)
         return
     try:
         val = int(args[0])
         if not (60 <= val <= 3600):
-            send_reply("Senpai angkanya aneh~ Harus antara 60 sampai 3600 detik dong! (>_<)", chat_id)
+            send_reply("Harus antara 60 sampai 3600 detik senpai.", chat_id)
             return
         settings["scan_interval"] = val
-        send_reply(f"Siap senpai! Scan interval aku ubah jadi *{val}s* ({val // 60} menit)~ (≧▽≦)", chat_id)
+        send_reply(f"Oke senpai, scan interval jadi *{val}s* ({val // 60} menit).", chat_id)
     except ValueError:
-        send_reply("Senpai angkanya ga valid nih~ Coba lagi ya! (〃>_<;〃)", chat_id)
+        send_reply("Angkanya ga valid senpai, coba lagi.", chat_id)
 
 
 def handle_heartbeat_cmd(args: list, chat_id: str) -> None:
     if not args:
-        send_reply(f"Heartbeat sekarang *{settings['heartbeat_minutes']} menit* senpai~\nContoh: `/heartbeat 30`", chat_id)
+        send_reply(f"Heartbeat sekarang *{settings['heartbeat_minutes']} menit* senpai.\nContoh: `/heartbeat 30`", chat_id)
         return
     try:
         val = int(args[0])
         if not (0 <= val <= 120):
-            send_reply("Senpai angkanya aneh~ Harus antara 0 sampai 120 menit dong! (>_<)", chat_id)
+            send_reply("Harus antara 0 sampai 120 menit senpai.", chat_id)
             return
         settings["heartbeat_minutes"] = val
         if val == 0:
-            send_reply("Oke senpai, aku diem dulu ya~ Tapi aku tetep kerja kok! Jangan khawatir~ (^▽^)", chat_id)
+            send_reply("Oke senpai, heartbeat dimatiin. Aku tetap jalan kok.", chat_id)
         else:
-            send_reply(f"Senpai, senpai! Aku lapor setiap *{val} menit* ya~ Jangan kaget kalau aku sering muncul! (≧▽≦)", chat_id)
+            send_reply(f"Siap, aku lapor setiap *{val} menit* ya senpai.", chat_id)
     except ValueError:
-        send_reply("Senpai angkanya ga valid nih~ Coba lagi ya! (〃>_<;〃)", chat_id)
+        send_reply("Angkanya ga valid senpai, coba lagi.", chat_id)
 
 
 # =============================================================================
@@ -456,10 +452,9 @@ def send_heartbeat() -> bool:
     bar = "█" * bar_filled + "░" * (10 - bar_filled)
     data_status = f"✅ Penuh ({hours:.1f}h)" if hours >= max_h else f"⏳ {hours:.1f}h / {max_h}h"
     success = send_message(
-        f"💓 *Senpai, senpai! Dengar ini dong~* (≧▽≦)\n"
+        f"💓 *Lookback Bot — Laporan Rutin*\n"
         f"\n"
-        f"Aku masih di sini kok! Kerja keras ngumpulin data buat senpai~\n"
-        f"Jangan lupa perhatiin aku ya! Jangan marah~ (〃>_<;〃)\n"
+        f"Masih jalan senpai, tenang aja.\n"
         f"\n"
         f"*{settings['heartbeat_minutes']} menit terakhir:*\n"
         f"┌─────────────────────\n"
@@ -473,11 +468,9 @@ def send_heartbeat() -> bool:
         f"│ ETH: {eth_str}\n"
         f"└─────────────────────\n"
         f"\n"
-        f"*Redis Data:*\n"
+        f"*Redis:*\n"
         f"[{bar}] {hours:.1f}h / {max_h}h\n"
-        f"Status: {data_status}\n"
-        f"\n"
-        f"_Aku lanjut kerja ya senpai~ Ditunggu pujiannya! (^▽^)_"
+        f"Status: {data_status}"
     )
     scan_stats["count"] = 0
     scan_stats["errors"] = 0
@@ -505,30 +498,26 @@ def send_startup_message() -> None:
 
     if len(price_history) > 0:
         history_info = (
-            f"Senpai senpai, tebak apa~! Data lama aku temuin di Redis! (≧▽≦)\n"
-            f"*{hours:.1f}h* data udah ada, bot utama bisa langsung pakai~!\n"
-            f"_Keren kan? Aku emang rajin! (^▽^)_"
+            f"Data lama ketemu di Redis — *{hours:.1f}h* sudah tersimpan.\n"
+            f"_Bot utama bisa langsung pakai._"
         )
     else:
         history_info = (
-            f"⏳ Mulai dari nol nih senpai~ Aku kumpulin {max_h}h data dulu ya~\n"
-            f"_Estimasi siap dalam {max_h} jam~ Sabar ya jangan tinggalin aku! (〃>_<;〃)_"
+            f"Mulai dari nol, ngumpulin {max_h}h data dulu.\n"
+            f"_Estimasi siap dalam {max_h} jam._"
         )
 
     send_message(
-        f"Senpai, senpai! Dengar ini dong~ (≧▽≦)\n"
-        f"*Lookback Bot* udah nyala nih!\n"
+        f"*Lookback Bot* nyala senpai.\n"
         f"\n"
-        f"Tugasku simpel — kumpulin harga BTC/ETH setiap "
-        f"{settings['scan_interval']}s dan simpen ke Redis~\n"
+        f"Tugasku — kumpulin harga BTC/ETH tiap {settings['scan_interval']}s\n"
+        f"dan simpen ke Redis buat bot utama.\n"
         f"\n"
         f"{history_info}\n"
         f"\n"
         f"📊 Scan interval: {settings['scan_interval']}s\n"
         f"💓 Heartbeat: setiap {settings['heartbeat_minutes']} menit\n"
-        f"🗄️ Redis key: `{REDIS_KEY}`\n"
-        f"\n"
-        f"_Aku kerja keras di sini buat senpai ya~ Jangan lupa perhatiin aku! (^▽^)_"
+        f"🗄️ Redis key: `{REDIS_KEY}`"
     )
 
 
