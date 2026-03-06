@@ -112,11 +112,15 @@ def load_history() -> None:
 
         raw = result["result"]
 
-        # Upstash kadang return sudah jadi list, kadang masih string
+        # Upstash bisa return string atau sudah jadi list
         if isinstance(raw, str):
             data = json.loads(raw)
         else:
             data = raw
+
+        # Handle double-encoded JSON (string di dalam string)
+        if isinstance(data, str):
+            data = json.loads(data)
 
         price_history = [
             PricePoint(
