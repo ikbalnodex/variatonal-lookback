@@ -159,7 +159,8 @@ def get_redis_status() -> dict:
             "first": data[0]["timestamp"] if data else "-",
             "last": data[-1]["timestamp"] if data else "-",
         }
-    except Exception:
+    except Exception as e:
+        logger.warning(f"get_redis_status parse error: {e} | raw type: {type(raw)} | raw[:100]: {str(raw)[:100]}")
         return {"ok": False, "points": 0, "hours": 0.0, "first": "-", "last": "-"}
 
 
